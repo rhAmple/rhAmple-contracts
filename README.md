@@ -40,7 +40,7 @@ make help
 
 ## Dependencys
 
-- [merkleplant's ElasticReceiptToken](https://github.com/rhAmple/elastic-receipt-token)
+- [merkleplant's ElasticReceiptToken](https://github.com/pmerkleplant/elastic-receipt-token)
 - [byterocket's Ownable](https://github.com/byterocket/ownable)
 - [Rari Capital's solmate](https://github.com/rari-capital/solmate)
 
