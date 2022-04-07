@@ -10,3 +10,6 @@
 [submodule "lib/solrocket"]
 	path = lib/solrocket
 	url = https://github.com/byterocket/solrocket
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/brockelmore/forge-std
