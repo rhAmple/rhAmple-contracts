@@ -7,3 +7,6 @@
 [submodule "lib/elastic-receipt-token"]
 	path = lib/elastic-receipt-token
 	url = https://github.com/pmerkleplant/elastic-receipt-token
+[submodule "lib/solrocket"]
+	path = lib/solrocket
+	url = https://github.com/byterocket/solrocket
