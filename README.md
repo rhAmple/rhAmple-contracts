@@ -41,7 +41,7 @@ make help
 ## Dependencys
 
 - [merkleplant's ElasticReceiptToken](https://github.com/pmerkleplant/elastic-receipt-token)
-- [byterocket's Ownable](https://github.com/byterocket/ownable)
+- [byterocket's solrocket](https://github.com/byterocket/solrocket)
 - [Rari Capital's solmate](https://github.com/rari-capital/solmate)
 
 ### Test Dependencies
