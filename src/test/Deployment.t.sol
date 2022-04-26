@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
-import "./Test.t.sol";
+import "./BaseTest.t.sol";
 
 /**
  * @dev Deployment Tests.
  */
-contract Deployment is Test {
+contract Deployment is BaseTest {
 
     function testInvariants() public {
         // Ownable Dependency Invariants.
@@ -37,22 +37,11 @@ contract Deployment is Test {
         assertEq(rhAmple.ample(), address(ample));
         assertEq(rhAmple.rebaseStrategy(), address(rebaseStrategy));
         assertEq(rhAmple.rebaseHedger(), address(rebaseHedger));
-        assertEq(rhAmple.receiptToken(), address(receiptToken));
-        assertEq(
-            rhAmple.rebaseHedgerRewardsReceiver(),
-            address(rebaseHedgerRewardsReceiver)
-        );
         assertEq(rhAmple.maxAmplesToHedge(), maxAmplesToHedge);
 
-        // Infinite allowance given to rebase hedger.
+        // Infinite Ample allowance given to IRebaseHedger.
         assertEq(
             ample.allowance(address(rhAmple), address(rebaseHedger)),
-            type(uint).max
-        );
-        assertEq(
-            receiptToken.allowance(
-                address(rhAmple), address(rebaseHedger)
-            ),
             type(uint).max
         );
     }

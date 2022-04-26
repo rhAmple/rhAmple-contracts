@@ -43,14 +43,10 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     /// @notice Emitted when Ample's market oracle changed.
     event RebaseStrategyChanged(address from, address to);
 
-    /// @notice Emitted when the {IRebaseHedger} address changed.
+    /// @notice Emitted when the IRebaseHedger address changed.
     event RebaseHedgerChanged(address from, address to);
 
-    /// @notice Emitted when the receiver address for the {IRebaseHedger}'s
-    ///         underlying protocol's rewards changed.
-    event RebaseHedgerRewardsReceiverChanged(address from, address to);
-
-    /// @notice Emitted when the {IRebaseHedger}'s underlying protocol rewards
+    /// @notice Emitted when IRebaseHedger's underlying protocol rewards
     ///         claimed.
     event RebaseHedgerRewardsClaimed();
 
@@ -66,16 +62,16 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     //----------------------------------
     // Restructuring Events
 
-    /// @notice Emitted when Amples deposited into the {IRebaseHedger}.
+    /// @notice Emitted when Amples deposited into the IRebaseHedger.
     event AmplesHedged(uint epoch, uint amples);
 
-    /// @notice Emitted when Amples withdrawn from the {IRebaseHedger}.
+    /// @notice Emitted when Amples withdrawn from the IRebaseHedger.
     event AmplesDehedged(uint epoch, uint amples);
 
     //----------------------------------
     // Failure Events
 
-    /// @notice Emitted when the {IRebaseStrategy} implementation sends an
+    /// @notice Emitted when the IRebaseStrategy implementation sends an
     ///         invalid signal.
     event RebaseStrategyFailure();
 
@@ -92,35 +88,26 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     /// @notice The Ample token address.
     address public immutable ample;
 
-    /// @notice The {IRebaseStrategy} implementation address.
+    /// @notice The IRebaseStrategy implementation address.
     /// @dev Changeable by owner.
     address public rebaseStrategy;
 
-    /// @notice The {IRebaseHedger} implementation address.
+    /// @notice The IRebaseHedger implementation address.
     /// @dev Changeable by owner.
     address public rebaseHedger;
 
-    /// @notice The {IRebaseHedger}'s receipt token address.
-    /// @dev Updated if {IRebaseHedger} implementation changes.
-    address public receiptToken;
-
-    /// @notice The address to send {IRebaseHedger}'s underlying protocol
-    ///         rewards to.
-    /// @dev Changeable by owner.
-    address public rebaseHedgerRewardsReceiver;
-
     /// @notice The max amount of Amples allowed to deposit into
-    ///         the {IRebaseHedger}.
+    ///         the IRebaseHedger.
     /// @dev Changeable by owner.
     /// @dev Setting to zero disables hedging.
     uint public maxAmplesToHedge;
 
     /// @dev The restructure counter, i.e. the number of rhAmple restructurings
     ///      executed since inception.
-    uint private _epoch;
+    uint public epoch;
 
-    /// @notice True if Ample deposits are hedged against the rebase,
-    ///         false otherwise.
+    /// @notice True if Ample deposits are hedged against rebase, false
+    ///         otherwise.
     /// @dev Updated every time rhAmple restructures.
     /// @dev Useful for off-chain services to fetch rhAmple's hedging state.
     bool public isHedged;
@@ -132,7 +119,6 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         address ample_,
         address rebaseStrategy_,
         address rebaseHedger_,
-        address rebaseHedgerRewardsReceiver_,
         uint maxAmplesToHedge_
     ) ElasticReceiptToken("rebase-hedged Ample", "rhAMPL", uint8(DECIMALS)) {
         // Make sure that strategy is working.
@@ -144,13 +130,11 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         ample = ample_;
         rebaseStrategy = rebaseStrategy_;
         rebaseHedger = rebaseHedger_;
-        receiptToken = IRebaseHedger(rebaseHedger_).token();
-        rebaseHedgerRewardsReceiver = rebaseHedgerRewardsReceiver_;
         maxAmplesToHedge = maxAmplesToHedge_;
 
-        // Approve tokens for rebase hedger.
+        // Approve Amples for IRebaseHedger.
+        // Note that Ample does NOT interpret max(uint) as infinite.
         ERC20(ample_).approve(rebaseHedger_, type(uint).max);
-        ERC20(receiptToken).approve(rebaseHedger_, type(uint).max);
     }
 
     //--------------------------------------------------------------------------
@@ -172,10 +156,8 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         // Note that the conversion rate of Ample:rhAmple is 1:1.
-        uint amples = rhAmples;
-
-        _deposit(msg.sender, msg.sender, amples);
-        return amples;
+        _deposit(msg.sender, msg.sender, rhAmples);
+        return rhAmples;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -185,10 +167,8 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         // Note that the conversion rate of Ample:rhAmple is 1:1.
-        uint amples = rhAmples;
-
-        _deposit(msg.sender, to, amples);
-        return amples;
+        _deposit(msg.sender, to, rhAmples);
+        return rhAmples;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -254,10 +234,8 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         // Note that the conversion rate of Ample:rhAmple is 1:1.
-        uint rhAmples = amples;
-
-        _withdraw(msg.sender, msg.sender, rhAmples);
-        return rhAmples;
+        _withdraw(msg.sender, msg.sender, amples);
+        return amples;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -267,10 +245,8 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         // Note that the conversion rate of Ample:rhAmple is 1:1.
-        uint rhAmples = amples;
-
-        _withdraw(msg.sender, to, rhAmples);
-        return rhAmples;
+        _withdraw(msg.sender, to, amples);
+        return amples;
     }
 
     /// @inheritdoc IButtonWrapper
@@ -280,6 +256,7 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         uint rhAmples = super.balanceOf(address(msg.sender));
+
         _withdraw(msg.sender, msg.sender, rhAmples);
         return rhAmples;
     }
@@ -291,6 +268,7 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         returns (uint)
     {
         uint rhAmples = super.balanceOf(address(msg.sender));
+
         _withdraw(msg.sender, to, rhAmples);
         return rhAmples;
     }
@@ -360,9 +338,19 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         // Note that MAX_SUPPLY is defined in the upstream ElasticReceiptToken
         // contract.
         if (maxAmplesToHedge_ > MAX_SUPPLY) {
+            // Do nothing if maxAmplesToHedge does not change.
+            if (maxAmplesToHedge == MAX_SUPPLY) {
+                return;
+            }
+
             emit MaxAmplesToHedgeChanged(maxAmplesToHedge, MAX_SUPPLY);
             maxAmplesToHedge = MAX_SUPPLY;
         } else {
+            // Do nothing if maxAmplesToHedge does not change.
+            if (maxAmplesToHedge == maxAmplesToHedge_) {
+                return;
+            }
+
             emit MaxAmplesToHedgeChanged(maxAmplesToHedge, maxAmplesToHedge_);
             maxAmplesToHedge = maxAmplesToHedge_;
         }
@@ -371,6 +359,11 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     /// @notice Sets the rebase strategy implementation.
     /// @dev Only callable by owner.
     function setRebaseStrategy(address rebaseStrategy_) external onlyOwner {
+        // Do nothing if rebaseStrategy does not change.
+        if (rebaseStrategy == rebaseStrategy_) {
+            return;
+        }
+
         // Make sure that strategy is working.
         bool isValid;
         ( , isValid) = IRebaseStrategy(rebaseStrategy_).getSignal();
@@ -380,60 +373,36 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         rebaseStrategy = rebaseStrategy_;
     }
 
-    /// @notice Set rebase hedger's underlying protocol's rewards receiver.
+    /// @notice Set a new IRebaseHedger implementation.
     /// @dev Only callable by owner.
-    function setRebaseHedgerRewardsReceiver(address rebaseHedgerRewardsReceiver_)
-        external
-        onlyOwner
-    {
-        emit RebaseHedgerRewardsReceiverChanged(
-            rebaseHedgerRewardsReceiver,
-            rebaseHedgerRewardsReceiver_
-        );
-        rebaseHedgerRewardsReceiver = rebaseHedgerRewardsReceiver_;
-    }
-
-    /// @notice Sets the rebase hedger implementation.
-    /// @dev Only callable by owner.
-    function setRebaseHedger(
-        address rebaseHedger_,
-        bool withdrawTokens,
-        bool claimRewards
-    ) external onlyOwner {
-        // If requested, claim rebase hedger's underlying protocol rewards.
-        if (claimRewards) {
-            // Note that the claimRewards function has to be called via
-            // delegate call so that the rebase hedger's "claim" call to the
-            // underlying protocol forwards address(this) as msg.sender.
-            bool success;
-            (success, /*data*/) = rebaseHedger.delegatecall(
-                abi.encodeWithSignature(
-                    "claimRewards(address)",
-                    rebaseHedgerRewardsReceiver
-                )
-            );
-            require(success, "Claim failed");
-
-            emit RebaseHedgerRewardsClaimed();
+    function setRebaseHedger(address rebaseHedger_) external onlyOwner {
+        // Do nothing if rebaseHedger does not change.
+        if (rebaseHedger == rebaseHedger_) {
+            return;
         }
 
-        // If requested, withdraw receipt tokens.
-        if (withdrawTokens) {
-            _dehedgeAmples();
-        }
+        // Note that rewards are not claimed. This is to make sure that the
+        // IRebaseHedger implementation can be changed in case the claiming
+        // process is broken.
 
-        // Remove approvals for old rebase hedger.
+        // Withdraw Amples from current IRebaseHedger and remove approvals.
+        _dehedgeAmples();
         ERC20(ample).approve(rebaseHedger, 0);
-        ERC20(receiptToken).approve(rebaseHedger, 0);
 
-        // Set new rebase hedger.
+        // Set new IRebaseHedger.
         emit RebaseHedgerChanged(rebaseHedger, rebaseHedger_);
         rebaseHedger = rebaseHedger_;
-        receiptToken = IRebaseHedger(rebaseHedger).token();
 
-        // Approve tokens for rebase hedger.
+        // Approve Amples for IRebaseHedger.
+        // Note that Ample does NOT interpret max(uint) as infinite.
         ERC20(ample).approve(rebaseHedger_, type(uint).max);
-        ERC20(receiptToken).approve(rebaseHedger_, type(uint).max);
+    }
+
+    /// @notice Claims IRebaseHedger's underlying protocol rewards.
+    /// @dev Only callable by owner.
+    function claimRebaseHedgerRewards(address receiver) external onlyOwner {
+        IRebaseHedger(rebaseHedger).claimRewards(receiver);
+        emit RebaseHedgerRewardsClaimed();
     }
 
     //--------------------------------------------------------------------------
@@ -527,7 +496,7 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
         uint amplesMissing = rhAmples - rawAmpleBalance;
 
         // Note that the withdrawed amount does not have to equal amplesMissing.
-        // For more info see {IRebaseHedger}.
+        // For more info see IRebaseHedger.
         IRebaseHedger(rebaseHedger).withdraw(amplesMissing);
 
         // Note that positive slippage is attributed to user.
@@ -549,9 +518,17 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
             amplesToHedge = maxAmplesToHedge - hedgedAmpleBalance;
         }
 
+        // @todo Add test for this case.
+        // Approve Amples for IRebaseHedger if allowance is not sufficint.
+        // Note that Ample does NOT interpret max(uint) as infinite.
+        uint allowance = ERC20(ample).allowance(address(this), rebaseHedger);
+        if (allowance < amplesToHedge) {
+            ERC20(ample).approve(rebaseHedger, type(uint).max);
+        }
+
         IRebaseHedger(rebaseHedger).deposit(amplesToHedge);
 
-        emit AmplesHedged(++_epoch, amplesToHedge);
+        emit AmplesHedged(++epoch, amplesToHedge);
     }
 
     /// @dev Private function to de-hedge Ample deposits against negative
@@ -566,7 +543,7 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
 
         IRebaseHedger(rebaseHedger).withdraw(amplesToDehedge);
 
-        emit AmplesDehedged(++_epoch, amplesToDehedge);
+        emit AmplesDehedged(++epoch, amplesToDehedge);
     }
 
     /// @dev Private function to handle strategy failure. De-hedges all Amples
@@ -586,7 +563,7 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     /// @dev Private function returning the total amount of Amples
     ///      under management. The amount of Amples under management is the
     ///      sum of raw Amples held in the contract and Amples hedged in the
-    ///      {IRebaseHedger}.
+    ///      IRebaseHedger.
     function _totalAmpleBalance() private view returns (uint) {
         return _rawAmpleBalance() + _hedgedAmpleBalance();
     }
@@ -598,11 +575,10 @@ contract RhAmple is ElasticReceiptToken, Ownable, IButtonWrapper {
     }
 
     /// @dev Private function returning the total amount of Amples hedged in
-    ///      the {IRebaseHedger}.
+    ///      the IRebaseHedger.
     function _hedgedAmpleBalance() private view returns (uint) {
-        // Note that {IRebaseHedger} defines the ratio of its token to
-        // Ample as 1:1.
-        return ERC20(receiptToken).balanceOf(address(this));
+        // Note that IRebaseHedger's balance denomination is in Ample.
+        return IRebaseHedger(rebaseHedger).balance();
     }
 
 }

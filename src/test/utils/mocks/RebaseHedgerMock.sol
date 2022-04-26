@@ -7,18 +7,15 @@ import {ERC20Mock} from "./ERC20Mock.sol";
 
 contract RebaseHedgerMock is IRebaseHedger {
 
-    ERC20Mock ample;
-    ERC20Mock receiptToken;
-
+    ERC20Mock public ample;
     ERC20Mock public rewardToken;
 
     uint public rewardsClaimable;
 
-    constructor(ERC20Mock ample_, ERC20Mock receiptToken_) {
+    uint private _balance;
+
+    constructor(ERC20Mock ample_) {
         ample = ample_;
-
-        receiptToken = receiptToken_;
-
         rewardToken = new ERC20Mock("RWD", "REWARDS", uint8(18));
     }
 
@@ -26,17 +23,25 @@ contract RebaseHedgerMock is IRebaseHedger {
         rewardsClaimable = rewardsClaimable_;
     }
 
+    function increaseBalance(uint amount) public {
+        _balance += amount;
+    }
+
+    function decreaseBalance(uint amount) public {
+        _balance -= amount;
+    }
+
     //--------------------------------------------------------------------------
     // IRebaseHedger Functions
 
     function deposit(uint amples) external {
         ample.transferFrom(msg.sender, address(this), amples);
-        receiptToken.mint(msg.sender, amples);
+        _balance += amples;
     }
 
     function withdraw(uint amples) external {
         ample.transfer(msg.sender, amples);
-        receiptToken.burn(msg.sender, amples);
+        _balance -= amples;
     }
 
     function claimRewards(address receiver) external {
@@ -44,12 +49,8 @@ contract RebaseHedgerMock is IRebaseHedger {
         rewardsClaimable = 0;
     }
 
-    function balanceOf(address who) external view returns (uint) {
-        return receiptToken.balanceOf(who);
-    }
-
-    function token() external view returns (address) {
-        return address(receiptToken);
+    function balance() external view returns (uint) {
+        return _balance;
     }
 
 }

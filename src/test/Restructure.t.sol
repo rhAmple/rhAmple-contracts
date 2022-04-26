@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
-import "./Test.t.sol";
+import "./BaseTest.t.sol";
 
 import {ERC20Mock} from "./utils/mocks/ERC20Mock.sol";
 import {RebaseHedgerMock} from "./utils/mocks/RebaseHedgerMock.sol";
@@ -9,7 +9,7 @@ import {RebaseHedgerMock} from "./utils/mocks/RebaseHedgerMock.sol";
 /**
  * @dev Restructure Function Tests.
  */
-contract Restructure is Test {
+contract Restructure is BaseTest {
 
     function setUpMintRhAmples(uint amount) public {
         // Mint some rhAmples not run into div by zero.
@@ -29,7 +29,7 @@ contract Restructure is Test {
         rhAmple.restructure();
 
         assertEq(ample.balanceOf(address(rhAmple)), 0);
-        assertEq(receiptToken.balanceOf(address(rhAmple)), 10e18);
+        assertEq(rebaseHedger.balance(), 10e18);
         assertEq(rhAmple.balanceOf(address(this)), 10e18);
         assertTrue(rhAmple.isHedged());
     }
@@ -47,7 +47,7 @@ contract Restructure is Test {
 
         // Check that no more than 5e18 Amples got hedged.
         assertEq(ample.balanceOf(address(rhAmple)), 5e18);
-        assertEq(receiptToken.balanceOf(address(rhAmple)), 5e18);
+        assertEq(rebaseHedger.balance(), 5e18);
         assertEq(rhAmple.balanceOf(address(this)), 10e18);
         assertTrue(rhAmple.isHedged());
     }
@@ -68,7 +68,7 @@ contract Restructure is Test {
         rhAmple.restructure();
 
         assertEq(ample.balanceOf(address(rhAmple)), 10e18);
-        assertEq(receiptToken.balanceOf(address(rhAmple)), 0);
+        assertEq(rebaseHedger.balance(), 0);
         assertEq(rhAmple.balanceOf(address(this)), 10e18);
         assertTrue(!rhAmple.isHedged());
     }
@@ -91,7 +91,7 @@ contract Restructure is Test {
 
         // Check that rhAmple is in dehedged state.
         assertEq(ample.balanceOf(address(rhAmple)), 10e18);
-        assertEq(receiptToken.balanceOf(address(rhAmple)), 0);
+        assertEq(rebaseHedger.balance(), 0);
         assertEq(rhAmple.balanceOf(address(this)), 10e18);
         assertTrue(!rhAmple.isHedged());
 
@@ -103,7 +103,7 @@ contract Restructure is Test {
         rhAmple.restructure();
 
         assertEq(ample.balanceOf(address(rhAmple)), 10e18);
-        assertEq(receiptToken.balanceOf(address(rhAmple)), 0);
+        assertEq(rebaseHedger.balance(), 0);
         assertEq(rhAmple.balanceOf(address(this)), 10e18);
         // Note that eventhough the amount of Amples hedged was 0, the protocol
         // still changed it's state to being hedged.

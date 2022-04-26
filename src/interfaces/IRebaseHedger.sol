@@ -4,53 +4,54 @@ pragma solidity ^0.8.0;
 /**
  * @title The RebaseHedger Interface
  *
- * @dev A RebaseHedger implementation can be used to deposit Ample
- *      tokens into a protocol which hedges, to some degree, the rebase.
+ * @dev A IRebaseHedger implementation is used by the rhAmple contract to
+ *      hedge, to some degree, an upcoming rebase.
  *
- *      While a RebaseHedger uses an own receipt token, e.g. Aave the
- *      aAmple token, this interface *only* uses Ample denominated amounts.
+ *      The implementation *must* make sure that only the rhAmple contract is
+ *      able to deposit and withdraw Amples as well as claiming any underlying
+ *      protocol rewards.
+ *
+ *      The IRebaseHedger uses Ample denomination for all functions.
+ *
+ *      After depositing, the rhAmple contract *does not* receive receipt
+ *      tokens. The hedged Amples are held inside the IRebaseHedger
+ *      implementation. This is due to simplify claiming rewards from
+ *      underlying protocols used by the IRebaseHedger implementation.
  *
  *      Note that in case a withdrawal of Ample tokens in the underlying
- *      protocol is not possible, the RebaseHedger's implementation
- *      *market sells* the protocol's receipt token for Ample tokens!
+ *      protocol is not possible, the IRebaseHedger implementation
+ *      *market sells* the underlying protocol's receipt token for Amples!
  *
  *      Therefore, the following invariant can NOT be guaranteed:
- *          balance = balanceOf(address(this));
- *          withdrawed = withdraw(balance);
+ *          balance = IRebaseHedger.balance();
+ *          withdrawed = IRebaseHedger.withdraw(balance);
  *          assert(balance == withdrawed);
  *
  * @author merkleplant
  */
 interface IRebaseHedger {
 
-    /// @notice Deposits Amples from msg.sender and mints *same amount* of
-    ///         receipt tokens as Amples deposited.
+    /// @notice Deposits Amples from the rhAmple contract in order to hedge
+    ///         against a negative rebase.
+    /// @dev Only callable by the rhAmple contract.
     /// @param amples The amount of Amples to deposit.
     function deposit(uint amples) external;
 
-    /// @notice Burns receipt tokens from msg.sender and withdraws Amples.
-    /// @dev Note that in case a withdrawal in the underlying protocol is not
-    ///      possible, the underlying receipt tokens will be sold in the open
-    ///      market for Amples.
+    /// @notice Withdraws Amples from the IRebaseHedger implementation and
+    ///         transfers them to the rhAmple contract.
+    /// @dev Only callable by the rhAmple contract.
     /// @param amples The amount of Amples to withdraw.
     function withdraw(uint amples) external;
 
-    /// @notice Returns the underlying Ample balance of an address.
-    /// @param who The address to fetch the Ample balance from.
-    /// @return The amount of Amples the address holds in the underlying protocol.
-    function balanceOf(address who) external view returns (uint);
-
-    /// @notice Returns the rebase hedger's receipt token address.
-    /// @dev Note to be careful using this token directly as there can
-    ///      be different conversion rates for different implementations.
-    /// @return The address of the rebase hedger's receipt token.
-    function token() external view returns (address);
-
-    /// @notice Claims rewards from the underlying protocol and sends them to
-    ///         some address.
-    /// @dev Must be called via delegate call so that caller's address is
-    ///      forwarded as msg.sender.
-    /// @param receiver The address to send the rewards to.
+    /// @notice Claims rewards from the IRebaseHedger implementation's
+    ///         underlying protocol and transfers them to the specified address.
+    /// @dev Only callable by the rhAmple contract.
+    /// @param receiver The address to receive the rewards.
     function claimRewards(address receiver) external;
+
+    /// @notice Returns the balance, denominated in Ample, the rhAmple contract
+    ///         has deposited in the IRebaseHedger implementation.
+    /// @return rhAmple's balance in the IRebaseHedger implementation.
+    function balance() external view returns (uint);
 
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
-import "./Test.t.sol";
+import "./BaseTest.t.sol";
 
 import {ERC20Mock} from "./utils/mocks/ERC20Mock.sol";
 import {RebaseHedgerMock} from "./utils/mocks/RebaseHedgerMock.sol";
@@ -9,7 +9,7 @@ import {RebaseHedgerMock} from "./utils/mocks/RebaseHedgerMock.sol";
 /**
  * @dev ButtonWrapper Function Tests.
  */
-contract ButtonWrapper is Test {
+contract ButtonWrapper is BaseTest {
 
     function testDepositAndMint(
         bool isDeposit,

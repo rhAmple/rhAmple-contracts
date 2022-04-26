@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
-import "ds-test/test.sol";
-
-import "forge-std/stdlib.sol";
+import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 
 import "../RhAmple.sol";
@@ -21,7 +19,7 @@ library Errors {
     bytes internal constant OnlyCallableByOwner
         = abi.encodeWithSignature("OnlyCallableByOwner()");
 
-    // Inheritc from pmerkleplant/elastic-receipt-token
+    // Inheritc from elastic-receipt-token/ElasticReceiptToken.sol.
     bytes internal constant InvalidRecipient
         = abi.encodeWithSignature("InvalidRecipient()");
     bytes internal constant InvalidAmount
@@ -36,28 +34,23 @@ library Errors {
  *      Provides the setUp function, access to common test utils, constants
  *      etc.
  */
-abstract contract Test is DSTest {
-    Vm internal constant vm = Vm(HEVM_ADDRESS);
-
+abstract contract BaseTest is Test {
     // SuT
     RhAmple rhAmple;
 
     // Settings
-    address rebaseHedgerRewardsReceiver = address(1);
     uint maxAmplesToHedge = MAX_SUPPLY;
 
     // Mocks
     ERC20Mock ample;
     RebaseStrategyMock rebaseStrategy;
     RebaseHedgerMock rebaseHedger;
-    ERC20Mock receiptToken;
 
     // Events copied from SuT.
     // Note that the Event declarations are needed to test for emission.
     event MaxAmplesToHedgeChanged(uint from, uint to);
     event RebaseStrategyChanged(address from, address to);
     event RebaseHedgerChanged(address from, address to);
-    event RebaseHedgerRewardsReceiverChanged(address from, address to);
     event RebaseHedgerRewardsClaimed();
     event RhAmplesMinted(address to, uint rhAmples);
     event RhAmplesBurned(address from, uint rhAmples);
@@ -74,7 +67,6 @@ abstract contract Test is DSTest {
 
     function setUp() public {
         // Tokens
-        receiptToken = new ERC20Mock("RT", "receipt token", uint8(9));
         ample = new ERC20Mock("AMPL", "Ample", uint8(9));
 
         // Rebase Strategy
@@ -82,14 +74,13 @@ abstract contract Test is DSTest {
         rebaseStrategy.setShouldHedgeAndValid(false, true);
 
         // Rebase Hedger
-        rebaseHedger = new RebaseHedgerMock(ample, receiptToken);
+        rebaseHedger = new RebaseHedgerMock(ample);
 
         // rhAmple
         rhAmple = new RhAmple(
             address(ample),
             address(rebaseStrategy),
             address(rebaseHedger),
-            rebaseHedgerRewardsReceiver,
             maxAmplesToHedge
         );
     }
